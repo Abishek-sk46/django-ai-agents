@@ -30,6 +30,8 @@ from django.conf import settings
 def get_gemini_model(model="gemini-1.5-flash", google_api_key=None):
     # Use provided API key or fall back to Django settings
     api_key = google_api_key or settings.GOOGLE_API_KEY
+    if model is None:
+        model = "gemini-1.5-flash"
     
     return ChatGoogleGenerativeAI(
         model=model,

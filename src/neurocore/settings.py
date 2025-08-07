@@ -128,4 +128,3 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None, cast=str)
-print(f"OpenAI API Key: {OPENAI_API_KEY}")  # Debugging line to check if the key is loaded correctly
