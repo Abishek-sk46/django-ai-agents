@@ -1,3 +1,4 @@
+from django.db.models import Q
 from documents.models import Document
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
@@ -9,9 +10,14 @@ from langchain_core.runnables import RunnableConfig
 def search_query_documents(query: str ,limit:int=5, config: RunnableConfig= {}):
     """
     Search the most recent 5 documents for the current user
+
+    arguments:
+    query: string  or lookup search across title or content of document
+    limit: number of resultk   
     """
 
-    limit = 5
+    if limit>25:
+        limit = 25
     configurable = config.get('configurable') or config.get('metadata')
     user_id = configurable.get('user_id')
 
@@ -32,9 +38,12 @@ def search_query_documents(query: str ,limit:int=5, config: RunnableConfig= {}):
     return response_data
 
 @tool
-def list_documents(config: RunnableConfig):
+def list_documents(limit:int = 5,config: RunnableConfig={}):
     """
     List the 5 most recent active documents for the current user.
+
+    arugments
+    limit: numberof results 
     """
     limit = 5
     configurable = config.get('configurable') or config.get('metadata')

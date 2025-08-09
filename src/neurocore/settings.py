@@ -128,3 +128,4 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None, cast=str)
+TMDB_API_KEY = config('TMDB_API_KEY', default=None, cast=str)           
