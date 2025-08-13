@@ -28,8 +28,8 @@ def search_query_documents(query: str ,limit:int=5, config: RunnableConfig= {}):
     }
 
     qs = Document.objects.filter(**default_lookups).filter(
-        Q(title_icontains=query) | 
-        Q(content_icontains = query)
+        Q(title__icontains=query) | 
+        Q(content__icontains = query)
     )
     response_data = [
         {"id": obj.id, "title": obj.title}
@@ -38,24 +38,39 @@ def search_query_documents(query: str ,limit:int=5, config: RunnableConfig= {}):
     return response_data
 
 @tool
-def list_documents(limit:int = 5,config: RunnableConfig={}):
+def list_documents(limit: int = 5, config: RunnableConfig = {}):
     """
-    List the 5 most recent active documents for the current user.
+    List the most recent active documents for the current user.
+    Use this tool whenever the user asks what documents they have,
+    requests to see available files, or asks for document titles.
 
-    arugments
-    limit: numberof results 
+    Arguments:
+    - limit: maximum number of documents to return (default 5)
     """
-    limit = 5
+    # Safety cap so LLM can't request too many
+    if limit > 25:
+        limit = 25
+
     configurable = config.get('configurable') or config.get('metadata')
     user_id = configurable.get('user_id')
 
-    qs = Document.objects.filter(active=True, owner_id=user_id).order_by("-created_at")
-    response_data = [
-        {"id": obj.id, "title": obj.title}
-        for obj in qs[:limit]
-    ]
-    return response_data
+    if not user_id:
+        raise Exception("Invalid request: user_id not provided.")
 
+    qs = Document.objects.filter(
+        active=True,
+        owner_id=user_id
+    ).order_by("-created_at")[:limit]
+
+    if not qs.exists():
+        return {"message": "No active documents found for this user."}
+
+    # Format in a way that LLM can present easily
+    titles = [obj.title for obj in qs]
+    return {
+        "count": len(titles),
+        "titles": titles
+    }
 
 @tool
 def get_document(document_id: int, config: RunnableConfig):
@@ -175,6 +190,7 @@ def update_document(document_id: int, title: str = None, content: str = None, co
 
 # Register tools for LangChain agent
 documents_tools = [
+    search_query_documents,
     list_documents,
     get_document,
     create_document,

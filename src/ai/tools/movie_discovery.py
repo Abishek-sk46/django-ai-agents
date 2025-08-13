@@ -23,8 +23,7 @@ def search_movies(query: str ,limit:int=5, config: RunnableConfig= {}):
     print('Searching for user:', user_id)
 
     response = tmdb_client.search_movie(query, raw=False)
-    if not response.status_code not in range(200, 300):
-        return []
+    
 
     try:
         total_results = int(response.get("total_results"))
@@ -34,7 +33,7 @@ def search_movies(query: str ,limit:int=5, config: RunnableConfig= {}):
     if total_results == 0:
         return []
 
-    if total_results > 25:
+    if limit > 25:
         limit = 25
     results = response.get("results")[:limit]
 
@@ -59,7 +58,7 @@ def movies_detail(movie_id: int , config: RunnableConfig= {}):
 
     return response
 
-movie_discovery_tools = {
+movie_discovery_tools = [
     search_movies,
     movies_detail,
-}
+]
