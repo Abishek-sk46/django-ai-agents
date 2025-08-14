@@ -129,3 +129,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None, cast=str)
 TMDB_API_KEY = config('TMDB_API_KEY', default=None, cast=str)           
+
+PERMIT_API_KEY = config('PERMIT_API_KEY', default=None, cast=str)
+
+PERMIT_PDP_ENDPOINT = config('PERMIT_PDP_ENDPOINT', default="https://cloudpdp.api.permit.io", cast=str)
+
+
