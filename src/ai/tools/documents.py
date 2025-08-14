@@ -3,7 +3,8 @@ from documents.models import Document
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 
-
+from asgiref.sync import async_to_sync
+from mypermit import permit_client as permit
 
 
 @tool
@@ -27,10 +28,16 @@ def search_query_documents(query: str ,limit:int=5, config: RunnableConfig= {}):
 
     }
 
+    has_perms = async_to_sync(permit.check)(f"{user_id}", "read", "document")
+    if not has_perms:
+        raise Exception("You do not have permission to do search the documents")
+
+
     qs = Document.objects.filter(**default_lookups).filter(
         Q(title__icontains=query) | 
         Q(content__icontains = query)
-    )
+    ).order_by("-created_at")
+
     response_data = [
         {"id": obj.id, "title": obj.title}
         for obj in qs[:limit]
@@ -53,6 +60,9 @@ def list_documents(limit: int = 5, config: RunnableConfig = {}):
 
     configurable = config.get('configurable') or config.get('metadata')
     user_id = configurable.get('user_id')
+    has_perms = async_to_sync(permit.check)(f"{user_id}", "read", "document")
+    if not has_perms:
+        raise Exception("You do not have permission to do list the documents")
 
     if not user_id:
         raise Exception("Invalid request: user_id not provided.")
@@ -83,6 +93,12 @@ def get_document(document_id: int, config: RunnableConfig):
     if user_id is None:
         raise Exception("Invalid request for user")
 
+    has_perms = async_to_sync(permit.check)(f"{user_id}", "read", "document")
+    if not has_perms:
+        raise Exception("You do not have permission to get  the documents")
+
+
+
     try:
         obj = Document.objects.get(id=document_id, owner_id=user_id, active=True)
     except Document.DoesNotExist:
@@ -109,6 +125,9 @@ def create_document(title: str, content: str, config: RunnableConfig):
     """
     configurable = config.get('configurable') or config.get('metadata')
     user_id = configurable.get('user_id')
+    has_perms = async_to_sync(permit.check)(f"{user_id}", "create", "document")
+    if not has_perms:
+        raise Exception("You do not have permission to do create the documents")
 
     if user_id is None:
         raise Exception("Invalid request for user")
@@ -138,6 +157,11 @@ def delete_document(document_id: int, config: RunnableConfig):
 
     if user_id is None:
         raise Exception("Invalid request for user")
+    
+    has_perms = async_to_sync(permit.check)(f"{user_id}", "delete", "document")
+    if not has_perms:
+        raise Exception("You do not have permission to do delete the documents")
+
 
     try:
         obj = Document.objects.get(id=document_id, owner_id=user_id, active=True)
@@ -162,6 +186,9 @@ def update_document(document_id: int, title: str = None, content: str = None, co
 
     if user_id is None:
         raise Exception("Invalid request for user")
+    has_perms = async_to_sync(permit.check)(f"{user_id}", "update", "document")
+    if not has_perms:
+        raise Exception("You do not have permission to do update the documents")
 
     try:
         obj = Document.objects.get(id=document_id, owner_id=user_id, active=True)
