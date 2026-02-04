@@ -1,6 +1,5 @@
 from langgraph.prebuilt import create_react_agent
 from ai.tools import documents_tools, movie_discovery_tools
-# from ai.llms  import get_gemini_model
 from ai.llms import get_llm
 
 
