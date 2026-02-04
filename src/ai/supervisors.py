@@ -1,14 +1,16 @@
-from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+# from langchain_openai import ChatOpenAI
+# from langgraph.prebuilt import create_react_agent
 from langgraph_supervisor import create_supervisor
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_google_genai import ChatGoogleGenerativeAI
 
-from ai.llms import get_gemini_model
+# from ai.llms import get_gemini_model
 from ai import agents
+from ai.llms import get_llm
+
 
 
 def get_supervisor(model=None, checkpointer=None):
-    llm_model = get_gemini_model(model=model)
+    llm_model = get_llm()
 
     return create_supervisor(
         agents=[

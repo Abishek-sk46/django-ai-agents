@@ -1,10 +1,12 @@
 from langgraph.prebuilt import create_react_agent
 from ai.tools import documents_tools, movie_discovery_tools
-from ai.llms  import get_gemini_model
+# from ai.llms  import get_gemini_model
+from ai.llms import get_llm
 
 
 def get_agent(model=None, checkpointer=None):
-    llm_model = get_gemini_model(model=model)
+    llm_model = get_llm()
+
 
     agent = create_react_agent(
         model=llm_model,
@@ -18,7 +20,8 @@ def get_agent(model=None, checkpointer=None):
 
 
 def get_movie_discovery_agent(model=None, checkpointer=None):
-    llm_model = get_gemini_model(model=model)
+    llm_model = get_llm()
+
 
     agent = create_react_agent(
         model=llm_model,
