@@ -31,6 +31,44 @@ def get_supervisor(model=None, checkpointer=None):
     ).compile(checkpointer=checkpointer)
 
 
+def _extract_final_message(response):
+    if not isinstance(response, dict):
+        return str(response)
+
+    messages = response.get("messages", [])
+    if not messages:
+        return ""
+
+    last_message = messages[-1]
+
+    if hasattr(last_message, "content"):
+        return last_message.content
+
+    if isinstance(last_message, dict):
+        return last_message.get("content", "")
+
+    return str(last_message)
+
+
+def _extract_selected_agent(response):
+    if not isinstance(response, dict):
+        return None
+
+    if response.get("selected_agent"):
+        return response["selected_agent"]
+
+    messages = response.get("messages", [])
+    for message in reversed(messages):
+        name = getattr(message, "name", None)
+        if name in {"document_agent", "movie_agent"}:
+            return name
+
+        if isinstance(message, dict) and message.get("name") in {"document_agent", "movie_agent"}:
+            return message["name"]
+
+    return None
+
+
 def run_supervisor(request, model=None, checkpointer=None):
     """
     Wrapper around the compiled supervisor that returns SupervisorResultContract.
@@ -48,18 +86,15 @@ def run_supervisor(request, model=None, checkpointer=None):
             },
         )
 
-        selected_agent = None
-        if isinstance(response, dict):
-            selected_agent = (
-                response.get("selected_agent")
-                or response.get("agent")
-                or response.get("name")
-            )
+        final_message = _extract_final_message(response)
+        selected_agent = _extract_selected_agent(response)
 
         return SupervisorResultContract(
             status="success",
             selected_agent=selected_agent,
-            result=response,
+            result={
+                "message": final_message
+            },
             error=None,
             meta={},
         )
