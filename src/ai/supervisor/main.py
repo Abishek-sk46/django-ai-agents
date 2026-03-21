@@ -1,6 +1,6 @@
 from langgraph_supervisor import create_supervisor
-from ai import agents
-from ai.llms import get_llm
+from ai.agents import get_document_agent, get_movie_discovery_agent
+from ai.core.llm import get_llm
 
 
 
@@ -9,8 +9,8 @@ def get_supervisor(model=None, checkpointer=None):
 
     return create_supervisor(
         agents=[
-            agents.get_agent(),
-            agents.get_movie_discovery_agent(),
+            get_document_agent(),
+            get_movie_discovery_agent(),
         ],
         model=llm_model,
         prompt=(
