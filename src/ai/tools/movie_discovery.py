@@ -3,6 +3,7 @@ from langchain_core.runnables import RunnableConfig
 
 from tmdb import client as tmdb_client
 from ai.core.contracts import ToolResultContract, ErrorContract
+from ai.core.logger import log_event
 
 
 @tool
@@ -15,10 +16,30 @@ def search_movies(query: str, limit: int = 5, config: RunnableConfig = {}):
     limit: number of results to return
     """
 
+    configurable = config.get("configurable") or config.get("metadata") or {}
+    user_id = configurable.get("user_id")
+    request_id = configurable.get("request_id")
+    trace = configurable.get("trace")
+
     try:
-        configurable = config.get("configurable") or config.get("metadata") or {}
-        user_id = configurable.get("user_id")
-        print("Searching for user:", user_id)
+        log_event(
+            event="tool_started",
+            layer="tool",
+            request_id=request_id or "unknown",
+            tool_name="search_movies",
+            user_id=user_id,
+            query=query,
+            limit=limit,
+        )
+        if trace:
+            trace.add_step(
+                layer="tool",
+                event="tool_started",
+                tool_name="search_movies",
+                user_id=user_id,
+                query=query,
+                limit=limit,
+            )
 
         response = tmdb_client.search_movie(query, raw=False)
 
@@ -28,6 +49,23 @@ def search_movies(query: str, limit: int = 5, config: RunnableConfig = {}):
             total_results = 0
 
         if total_results == 0:
+            log_event(
+                event="tool_failed",
+                layer="tool",
+                request_id=request_id or "unknown",
+                tool_name="search_movies",
+                error_code="NOT_FOUND",
+                query=query,
+            )
+            if trace:
+                trace.add_step(
+                    layer="tool",
+                    event="tool_failed",
+                    tool_name="search_movies",
+                    error_code="NOT_FOUND",
+                    query=query,
+                )
+
             return ToolResultContract(
                 status="failure",
                 data=None,
@@ -44,6 +82,21 @@ def search_movies(query: str, limit: int = 5, config: RunnableConfig = {}):
 
         results = response.get("results", [])[:limit]
 
+        log_event(
+            event="tool_succeeded",
+            layer="tool",
+            request_id=request_id or "unknown",
+            tool_name="search_movies",
+            result_count=len(results),
+        )
+        if trace:
+            trace.add_step(
+                layer="tool",
+                event="tool_succeeded",
+                tool_name="search_movies",
+                result_count=len(results),
+            )
+
         return ToolResultContract(
             status="success",
             data=results,
@@ -56,6 +109,23 @@ def search_movies(query: str, limit: int = 5, config: RunnableConfig = {}):
         )
 
     except Exception as exc:
+        log_event(
+            event="tool_failed",
+            layer="tool",
+            request_id=request_id or "unknown",
+            tool_name="search_movies",
+            error_code="TOOL_FAILURE",
+            error_message=str(exc),
+        )
+        if trace:
+            trace.add_step(
+                layer="tool",
+                event="tool_failed",
+                tool_name="search_movies",
+                error_code="TOOL_FAILURE",
+                error_message=str(exc),
+            )
+
         return ToolResultContract(
             status="failure",
             data=None,
@@ -77,14 +147,49 @@ def movies_detail(movie_id: int, config: RunnableConfig = {}):
     movie_id: ID of the movie to retrieve details for
     """
 
+    configurable = config.get("configurable") or config.get("metadata") or {}
+    user_id = configurable.get("user_id")
+    request_id = configurable.get("request_id")
+    trace = configurable.get("trace")
+
     try:
-        configurable = config.get("configurable") or config.get("metadata") or {}
-        user_id = configurable.get("user_id")
-        print("Searching for user:", user_id)
+        log_event(
+            event="tool_started",
+            layer="tool",
+            request_id=request_id or "unknown",
+            tool_name="movies_detail",
+            user_id=user_id,
+            movie_id=movie_id,
+        )
+        if trace:
+            trace.add_step(
+                layer="tool",
+                event="tool_started",
+                tool_name="movies_detail",
+                user_id=user_id,
+                movie_id=movie_id,
+            )
 
         response = tmdb_client.movie_detail(movie_id)
 
         if not response:
+            log_event(
+                event="tool_failed",
+                layer="tool",
+                request_id=request_id or "unknown",
+                tool_name="movies_detail",
+                error_code="NOT_FOUND",
+                movie_id=movie_id,
+            )
+            if trace:
+                trace.add_step(
+                    layer="tool",
+                    event="tool_failed",
+                    tool_name="movies_detail",
+                    error_code="NOT_FOUND",
+                    movie_id=movie_id,
+                )
+
             return ToolResultContract(
                 status="failure",
                 data=None,
@@ -96,6 +201,21 @@ def movies_detail(movie_id: int, config: RunnableConfig = {}):
                 meta={},
             )
 
+        log_event(
+            event="tool_succeeded",
+            layer="tool",
+            request_id=request_id or "unknown",
+            tool_name="movies_detail",
+            movie_id=movie_id,
+        )
+        if trace:
+            trace.add_step(
+                layer="tool",
+                event="tool_succeeded",
+                tool_name="movies_detail",
+                movie_id=movie_id,
+            )
+
         return ToolResultContract(
             status="success",
             data=response,
@@ -104,6 +224,23 @@ def movies_detail(movie_id: int, config: RunnableConfig = {}):
         )
 
     except Exception as exc:
+        log_event(
+            event="tool_failed",
+            layer="tool",
+            request_id=request_id or "unknown",
+            tool_name="movies_detail",
+            error_code="TOOL_FAILURE",
+            error_message=str(exc),
+        )
+        if trace:
+            trace.add_step(
+                layer="tool",
+                event="tool_failed",
+                tool_name="movies_detail",
+                error_code="TOOL_FAILURE",
+                error_message=str(exc),
+            )
+
         return ToolResultContract(
             status="failure",
             data=None,

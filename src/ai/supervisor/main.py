@@ -1,8 +1,10 @@
 from langgraph_supervisor import create_supervisor
 
 from ai.agents import get_document_agent, get_movie_discovery_agent
+from ai.core.contracts import SupervisorResultContract
+from ai.core.error_utils import map_exception_to_error_contract
 from ai.core.llm import get_llm
-from ai.core.contracts import SupervisorResultContract, ErrorContract
+from ai.core.logger import log_event
 
 
 def get_supervisor(model=None, checkpointer=None):
@@ -69,12 +71,23 @@ def _extract_selected_agent(response):
     return None
 
 
-def run_supervisor(request, model=None, checkpointer=None):
-    """
-    Wrapper around the compiled supervisor that returns SupervisorResultContract.
-    """
-
+def run_supervisor(request, model=None, checkpointer=None, request_id=None, trace=None):
     try:
+        log_event(
+            event="supervisor_started",
+            layer="supervisor",
+            request_id=request_id or "unknown",
+            message=request.message,
+            user_id=request.user_id,
+        )
+        if trace:
+            trace.add_step(
+                layer="supervisor",
+                event="supervisor_started",
+                message=request.message,
+                user_id=request.user_id,
+            )
+
         supervisor = get_supervisor(model=model, checkpointer=checkpointer)
 
         response = supervisor.invoke(
@@ -82,6 +95,7 @@ def run_supervisor(request, model=None, checkpointer=None):
             config={
                 "configurable": {
                     "user_id": request.user_id,
+                    "request_id": request_id,
                 }
             },
         )
@@ -89,25 +103,64 @@ def run_supervisor(request, model=None, checkpointer=None):
         final_message = _extract_final_message(response)
         selected_agent = _extract_selected_agent(response)
 
+        log_event(
+            event="agent_selected",
+            layer="supervisor",
+            request_id=request_id or "unknown",
+            selected_agent=selected_agent,
+        )
+        if trace:
+            trace.add_step(
+                layer="supervisor",
+                event="agent_selected",
+                selected_agent=selected_agent,
+            )
+
+        log_event(
+            event="supervisor_succeeded",
+            layer="supervisor",
+            request_id=request_id or "unknown",
+            selected_agent=selected_agent,
+        )
+        if trace:
+            trace.add_step(
+                layer="supervisor",
+                event="supervisor_succeeded",
+                selected_agent=selected_agent,
+            )
+
         return SupervisorResultContract(
             status="success",
             selected_agent=selected_agent,
             result={
-                "message": final_message
+                "message": final_message,
             },
             error=None,
             meta={},
         )
 
     except Exception as exc:
+        error_contract = map_exception_to_error_contract(exc)
+
+        log_event(
+            event="supervisor_failed",
+            layer="supervisor",
+            request_id=request_id or "unknown",
+            error_code=error_contract.code,
+            error_message=error_contract.message,
+        )
+        if trace:
+            trace.add_step(
+                layer="supervisor",
+                event="supervisor_failed",
+                error_code=error_contract.code,
+                error_message=error_contract.message,
+            )
+
         return SupervisorResultContract(
             status="failure",
             selected_agent=None,
             result=None,
-            error=ErrorContract(
-                code="SUPERVISOR_EXECUTION_FAILED",
-                message="Supervisor execution failed",
-                details={"reason": str(exc)},
-            ),
+            error=error_contract,
             meta={},
         )
