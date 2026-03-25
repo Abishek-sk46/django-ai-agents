@@ -1,4 +1,5 @@
 from dataclasses import asdict
+import uuid
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from ai.core.error_codes import VALIDATION_ERROR
 from ai.core.logger import log_event
 from ai.core.tracing import TraceContext, generate_request_id
 from ai.supervisor.main import run_supervisor
-
+from ai.models import Request  # ✅ NEW IMPORT
 
 class AgentQueryAPIView(APIView):
     def post(self, request):
@@ -56,6 +57,14 @@ class AgentQueryAPIView(APIView):
 
         validated_data = serializer.validated_data
 
+        # ✅ NEW: Create Request record in DB
+        db_request = Request.objects.create(
+            request_id=request_id,
+            user_id=validated_data.get("user_id"),
+            input_text=validated_data["message"],
+            status="pending",
+        )
+
         request_contract = RequestContract(
             user_id=validated_data.get("user_id"),
             message=validated_data["message"],
@@ -96,3 +105,4 @@ class AgentQueryAPIView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+

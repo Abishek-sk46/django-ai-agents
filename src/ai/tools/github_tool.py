@@ -7,6 +7,9 @@ from ai.core.logger import log_event
 
 from ai.tools.clients.github_client import GitHubClient
 
+from ai.models import Request, ToolExecution
+from django.utils import timezone
+
 
 @tool
 def create_github_issue(
@@ -28,6 +31,13 @@ def create_github_issue(
     user_id = configurable.get("user_id")
     request_id = configurable.get("request_id")
     trace = configurable.get("trace")
+
+    request_obj = None
+    if request_id:
+        try:
+            request_obj = Request.objects.get(request_id=request_id)
+        except Request.DoesNotExist:
+            request_obj = None
 
     try:
         # 🔹 log start
@@ -104,6 +114,21 @@ def create_github_issue(
                     issue_number=data.get("number"),
                 )
 
+
+            if request_obj:
+                ToolExecution.objects.create(
+                    request=request_obj,
+                    tool_name="create_github_issue",
+                    input_data={
+                        "repo": repo,
+                        "title": title,
+                        "body": body,
+                    },
+                    output_data=result.data,
+                    status="success",
+                    finished_at=timezone.now(),
+                )
+
             return result
 
         # ❌ FAILURE — structured mapping
@@ -155,6 +180,22 @@ def create_github_issue(
                 repo=repo,
             )
 
+
+        if request_obj:
+            ToolExecution.objects.create(
+                request=request_obj,
+                tool_name="create_github_issue",
+                input_data={
+                    "repo": repo,
+                    "title": title,
+                    "body": body,
+                },
+                status="failure",
+                error_code=error_code,
+                error_message=message,
+                finished_at=timezone.now(),
+            )
+
         return ToolResultContract(
             status="failure",
             data=None,
@@ -184,6 +225,21 @@ def create_github_issue(
                 tool_name="create_github_issue",
                 error_code="TOOL_FAILURE",
                 error_message=str(exc),
+            )
+
+        if request_obj:
+            ToolExecution.objects.create(
+                request=request_obj,
+                tool_name="create_github_issue",
+                input_data={
+                    "repo": repo,
+                    "title": title,
+                    "body": body,
+                },
+                status="failure",
+                error_code="TOOL_FAILURE",
+                error_message=str(exc),
+                finished_at=timezone.now(),
             )
 
         return ToolResultContract(

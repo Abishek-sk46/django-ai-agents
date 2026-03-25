@@ -65,3 +65,8 @@ python manage.py runserver
 ```
 
 For development and testing, use the Jupyter notebooks in the `notebook/` directory.
+
+
+docker logs ai-postgres
+docker exec -it ai-postgres psql -U postgres -d ai_orchestration_db
+\dt

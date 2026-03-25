@@ -7,6 +7,8 @@ from ai.core.llm import get_llm
 from ai.core.logger import log_event
 from ai.agents.github_agent import get_github_agent
 
+from ai.models import Request, Response
+
 
 def get_supervisor(model=None, checkpointer=None):
     llm_model = model or get_llm()
@@ -74,6 +76,12 @@ def _extract_selected_agent(response):
 
 
 def run_supervisor(request, model=None, checkpointer=None, request_id=None, trace=None):
+    request_obj = None
+    if request_id:
+        try:
+            request_obj = Request.objects.get(request_id=request_id)
+        except Request.DoesNotExist:
+            request_obj = None
     try:
         log_event(
             event="supervisor_started",
@@ -131,6 +139,22 @@ def run_supervisor(request, model=None, checkpointer=None, request_id=None, trac
                 selected_agent=selected_agent,
             )
 
+        if request_obj:
+    # update request status
+            request_obj.status = "success"
+            request_obj.save()
+
+            # save response
+            Response.objects.create(
+                request=request_obj,
+                output_data={
+                    "message": final_message,
+                    "agent": selected_agent,
+                },
+                status="success",
+                metadata={},
+            )
+
         return SupervisorResultContract(
             status="success",
             selected_agent=selected_agent,
@@ -157,6 +181,22 @@ def run_supervisor(request, model=None, checkpointer=None, request_id=None, trac
                 event="supervisor_failed",
                 error_code=error_contract.code,
                 error_message=error_contract.message,
+            )
+
+
+        if request_obj:
+    # update request status
+            request_obj.status = "failure"
+            request_obj.save()
+
+            # save response with error
+            Response.objects.create(
+                request=request_obj,
+                output_data=None,
+                status="failure",
+                error_code=error_contract.code,
+                error_message=error_contract.message,
+                metadata={},
             )
 
         return SupervisorResultContract(
