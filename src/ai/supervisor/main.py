@@ -5,6 +5,7 @@ from ai.core.contracts import SupervisorResultContract
 from ai.core.error_utils import map_exception_to_error_contract
 from ai.core.llm import get_llm
 from ai.core.logger import log_event
+from ai.agents.github_agent import get_github_agent
 
 
 def get_supervisor(model=None, checkpointer=None):
@@ -14,6 +15,7 @@ def get_supervisor(model=None, checkpointer=None):
         agents=[
             get_document_agent(),
             get_movie_discovery_agent(),
+            get_github_agent(),
         ],
         model=llm_model,
         prompt=(
@@ -62,10 +64,10 @@ def _extract_selected_agent(response):
     messages = response.get("messages", [])
     for message in reversed(messages):
         name = getattr(message, "name", None)
-        if name in {"document_agent", "movie_agent"}:
+        if name in {"document_agent", "movie_agent", "github_agent"}:
             return name
 
-        if isinstance(message, dict) and message.get("name") in {"document_agent", "movie_agent"}:
+        if isinstance(message, dict) and message.get("name") in {"document_agent", "movie_agent", "github_agent"}:
             return message["name"]
 
     return None

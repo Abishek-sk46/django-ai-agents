@@ -33,6 +33,11 @@ OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
 ALLOWED_HOSTS = []
 
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Application definition
 
 INSTALLED_APPS = [
