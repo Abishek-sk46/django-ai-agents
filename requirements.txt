@@ -5,3 +5,7 @@ langgraph
 python-decouple
 permit
 langgraph-supervisor
+djangorestframework
+psycopg2-binary
+celery>=5.3.0
+redis>=5.0.0

@@ -33,6 +33,11 @@ OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
 ALLOWED_HOSTS = []
 
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -43,6 +48,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'documents',  
+    "rest_framework",
+    'ai',
 ]
 
 MIDDLEWARE = [
@@ -80,11 +87,14 @@ WSGI_APPLICATION = 'neurocore.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ai_orchestration_db',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': 'localhost',
+        'PORT': '5433',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -135,3 +145,5 @@ PERMIT_API_KEY = config('PERMIT_API_KEY', default=None, cast=str)
 PERMIT_PDP_ENDPOINT = config('PERMIT_PDP_ENDPOINT', default="https://cloudpdp.api.permit.io", cast=str)
 
 
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
