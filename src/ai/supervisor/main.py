@@ -9,6 +9,8 @@ from ai.agents.github_agent import get_github_agent
 
 from ai.models import Request, Response
 
+from ai.tasks import execute_github_issue_task
+
 
 def get_supervisor(model=None, checkpointer=None):
     llm_model = model or get_llm()
@@ -113,6 +115,48 @@ def run_supervisor(request, model=None, checkpointer=None, request_id=None, trac
         final_message = _extract_final_message(response)
         selected_agent = _extract_selected_agent(response)
 
+        # 🔥 NEW: Handle GitHub via Celery (async)
+        if selected_agent == "github_agent":
+            task = execute_github_issue_task.delay({
+                "message": request.message,
+                "user_id": request.user_id,
+                "request_id": request_id,
+                "trace": {},
+            })
+
+            log_event(
+                event="task_dispatched",
+                layer="celery",
+                request_id=request_id or "unknown",
+                task_id=task.id,
+            )
+
+            # Update DB as pending
+            if request_obj:
+                request_obj.status = "pending"
+                request_obj.save()
+
+                Response.objects.create(
+                    request=request_obj,
+                    output_data={
+                        "task_id": task.id,
+                        "status": "pending",
+                    },
+                    status="pending",
+                    metadata={"task_id": task.id},
+                )
+
+            return SupervisorResultContract(
+                status="accepted",
+                selected_agent=selected_agent,
+                result={
+                    "task_id": task.id,
+                    "message": "Your request is being processed asynchronously",
+                },
+                error=None,
+                meta={"async": True},
+            )
+
         log_event(
             event="agent_selected",
             layer="supervisor",
@@ -140,7 +184,7 @@ def run_supervisor(request, model=None, checkpointer=None, request_id=None, trac
             )
 
         if request_obj:
-    # update request status
+            # update request status
             request_obj.status = "success"
             request_obj.save()
 
@@ -185,7 +229,7 @@ def run_supervisor(request, model=None, checkpointer=None, request_id=None, trac
 
 
         if request_obj:
-    # update request status
+            # update request status
             request_obj.status = "failure"
             request_obj.save()
 

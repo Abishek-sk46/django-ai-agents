@@ -104,5 +104,11 @@ class AgentQueryAPIView(APIView):
             **trace.to_dict(),
         }
 
+        if response_data.get("status") == "accepted":
+            return Response(response_data, status=status.HTTP_202_ACCEPTED)
+
+        elif response_data.get("status") == "failure":
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
         return Response(response_data, status=status.HTTP_200_OK)
 

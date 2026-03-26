@@ -145,3 +145,5 @@ PERMIT_API_KEY = config('PERMIT_API_KEY', default=None, cast=str)
 PERMIT_PDP_ENDPOINT = config('PERMIT_PDP_ENDPOINT', default="https://cloudpdp.api.permit.io", cast=str)
 
 
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
